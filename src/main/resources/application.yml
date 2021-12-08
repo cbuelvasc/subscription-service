@@ -1,0 +1,126 @@
+subscription-service:
+  version: v1
+  custom-audience: subscription-service
+
+security:
+  paths-to-ignore: api-docs, actuator
+
+server:
+  port: 9001
+  shutdown: graceful
+  tomcat:
+    connection-timeout: 2s
+    threads:
+      max: 50
+      min-spare: 5
+
+spring:
+
+  main:
+    allow-circular-references: true
+  application:
+    name: subscription-service
+  lifecycle:
+    timeout-per-shutdown-phase: 15s
+  config:
+    import: "optional:configserver:"
+  cloud:
+    bus:
+      enabled: false
+    config:
+      uri: http://localhost:8888
+      username: user
+      password: password
+      request-connect-timeout: 2000 # 2s
+      request-read-timeout: 5000 # 5s
+      fail-fast: false
+      retry:
+        max-attempts: 6
+        initial-interval: 1000 # 1s
+        max-interval: 2000 # 2s
+        multiplier: 1.1
+
+    stream:
+      default:
+        contentType: application/json
+      bindings:
+        email-out-0:
+          destination: email
+          producer:
+            required-groups: auditGroup
+
+  profiles:
+    active: test-data
+  jpa:
+    open-in-view: false
+    show-sql: true
+    database-platform: org.hibernate.dialect.PostgreSQL9Dialect
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQL9Dialect
+  datasource:
+    url: jdbc:postgresql://localhost:15432/companydb_subscription
+    username: user
+    password: password
+    hikari:
+      connection-timeout: 2000 #ms
+      maximum-pool-size: 5
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: user
+    password: password
+    connection-timeout: 5s
+  #security:
+  #  oauth2:
+  #    resourceserver:
+  #      jwt:
+  #        issuer-uri: ${KEYCLOAK_URL:http://localhost:9080}/auth/realms/subscription
+  #        jwk-set-uri: ${KEYCLOAK_URL:http://localhost:9080}/auth/realms/subscription/protocol/openid-connect/certs
+  #    client:
+  #      registration:
+  #        keycloak:
+  #          client-id: 'subscription-service'
+  #          client-secret: 'cf7c60b9-b04d-4707-924c-b33795e00648'
+  #          authorizationGrantType: client_credentials
+  #      provider:
+  #        keycloak:
+  #          tokenUri: ${KEYCLOAK_URL:http://localhost:9080}/auth/realms/subscription/protocol/openid-connect/token
+  sleuth:
+    sampler:
+      probability: 1.0
+  zipkin:
+    base-url: ${ZIPKIN_URL:http://localhost:9411/}
+
+keycloak:
+  #auth-server-url: http://host.docker.internal:8080/auth
+  auth-server-url: ${KEYCLOAK_URL:http://localhost:8080}/auth
+  #auth-server-url: http://localhost:8080/auth
+  bearer-only: true
+  credentials:
+    secret: 37b0f4d3-7f45-43e0-8f15-c3b79e6996c1
+  realm: subscription
+  resource: subscription-system
+  ssl-required: external
+  use-resource-role-mappings: true
+
+info:
+  system: Subscription System
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: flyway, health, metrics, heapdump, info, prometheus
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  info:
+    env:
+      enabled: true

@@ -1,0 +1,10 @@
+spring:
+  config:
+    import: optional:configserver:,configtree:/workspace/secrets/*/
+  cloud:
+    config:
+      uri: http://configuration-service
+  datasource:
+    url: jdbc:postgresql://postgres-subscription/companydb_subscription
+  rabbitmq:
+    host: rabbitmq

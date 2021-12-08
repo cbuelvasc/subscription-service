@@ -1,0 +1,50 @@
+name: CD Pipeline
+on:
+  push:
+    branches:
+      - main
+    tags-ignore:
+      - v*
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+      - name: Compile and test application
+        run: |
+          chmod +x gradlew
+          ./gradlew build
+  package:
+    name: Package
+    needs: [build]
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+      - name: Get project version
+        uses: thecodemonkey/action-get-gradle-version@master
+        id: version
+      - name: Containerize and publish image
+        run: |
+          chmod +x gradlew
+          ./gradlew bootBuildImage \
+            --imageName ghcr.io/cbuelvasc/subscription-service:${{ steps.version.outputs.version }} \
+            --publishImage \
+            -PregistryUrl=ghcr.io \
+            -PregistryUsername=cbuelvasc \
+            -PregistryToken=${{ secrets.GITHUB_TOKEN }}
